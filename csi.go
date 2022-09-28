@@ -1,7 +1,6 @@
 package termutil
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -172,22 +171,6 @@ func (t *Terminal) csiSendDeviceAttributesHandler(params []string) (renderRequir
 // CSI n
 // Device Status Report (DSR)
 func (t *Terminal) csiDeviceStatusReportHandler(params []string) (renderRequired bool) {
-
-	if len(params) == 0 {
-		return false
-	}
-
-	switch params[0] {
-	case "5":
-		t.WriteToPty([]byte("\x1b[0n")) // everything is cool
-	case "6": // report cursor position
-		t.WriteToPty([]byte(fmt.Sprintf(
-			"\x1b[%d;%dR",
-			t.GetActiveBuffer().CursorLine()+1,
-			t.GetActiveBuffer().CursorColumn()+1,
-		)))
-	}
-
 	return false
 }
 

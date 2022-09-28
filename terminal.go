@@ -7,8 +7,6 @@ import (
 	"io"
 	"os"
 	"sync"
-
-	"github.com/creack/pty"
 )
 
 const (
@@ -20,7 +18,6 @@ const (
 // Terminal communicates with the underlying terminal
 type Terminal struct {
 	mu             sync.Mutex
-	pty            *os.File
 	updateChan     chan struct{}
 	processChan    chan MeasuredRune
 	closeChan      chan struct{}
@@ -75,16 +72,6 @@ func (t *Terminal) reset() {
 	t.useMainBuffer()
 }
 
-// Pty exposes the underlying terminal pty, if it exists
-func (t *Terminal) Pty() *os.File {
-	return t.pty
-}
-
-func (t *Terminal) WriteToPty(data []byte) error {
-	_, err := t.pty.Write(data)
-	return err
-}
-
 func (t *Terminal) Theme() *Theme {
 	return t.theme
 }
@@ -100,25 +87,6 @@ func (t *Terminal) Write(data []byte) (n int, err error) {
 		t.processChan <- MeasuredRune{Rune: r, Width: size}
 	}
 	return len(data), nil
-}
-
-func (t *Terminal) SetSize(rows, cols uint16) error {
-	if t.pty == nil {
-		return fmt.Errorf("terminal is not running")
-	}
-
-	t.log("RESIZE %d, %d\n", cols, rows)
-
-	t.activeBuffer.resizeView(cols, rows)
-
-	if err := pty.Setsize(t.pty, &pty.Winsize{
-		Rows: rows,
-		Cols: cols,
-	}); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (t *Terminal) IsRunning() bool {
