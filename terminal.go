@@ -61,9 +61,9 @@ func (t *Terminal) reset() {
 	fg := t.theme.DefaultForeground()
 	bg := t.theme.DefaultBackground()
 	t.buffers = []*Buffer{
-		NewBuffer(1, 1, 0xffff, fg, bg),
-		NewBuffer(1, 1, 0xffff, fg, bg),
-		NewBuffer(1, 1, 0xffff, fg, bg),
+		NewBuffer(4096, 80, 0xffff, fg, bg),
+		NewBuffer(4096, 80, 0xffff, fg, bg),
+		NewBuffer(4096, 80, 0xffff, fg, bg),
 	}
 	t.useMainBuffer()
 }
