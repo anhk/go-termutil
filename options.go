@@ -15,21 +15,3 @@ func WithLogFile(path string) Option {
 		t.logFile, _ = os.Create(path)
 	}
 }
-
-func WithTheme(theme *Theme) Option {
-	return func(t *Terminal) {
-		t.theme = theme
-	}
-}
-
-func WithShell(shell string) Option {
-	return func(t *Terminal) {
-		t.shell = shell
-	}
-}
-
-func WithInitialCommand(cmd string) Option {
-	return func(t *Terminal) {
-		t.initialCommand = cmd + "\n"
-	}
-}

@@ -1,6 +1,6 @@
 package termutil
 
-func (t *Terminal) handleANSI(readChan chan MeasuredRune) (renderRequired bool) {
+func (t *Terminal) handleANSI(readChan chan MeasuredRune) bool {
 	// if the byte is an escape character, read the next byte to determine which one
 	r := <-readChan
 
@@ -51,7 +51,7 @@ func (t *Terminal) handleANSI(readChan chan MeasuredRune) (renderRequired bool) 
 		return false
 	}
 
-	return true
+	return false
 }
 
 func swallowHandler(size int) func(pty chan MeasuredRune) bool {

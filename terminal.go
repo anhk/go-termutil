@@ -17,18 +17,15 @@ const (
 
 // Terminal communicates with the underlying terminal
 type Terminal struct {
-	mu             sync.Mutex
-	processChan    chan MeasuredRune
-	closeChan      chan struct{}
-	buffers        []*Buffer
-	activeBuffer   *Buffer
-	mouseMode      MouseMode
-	mouseExtMode   MouseExtMode
-	logFile        *os.File
-	theme          *Theme
-	running        bool
-	shell          string
-	initialCommand string
+	mu           sync.Mutex
+	processChan  chan MeasuredRune
+	closeChan    chan struct{}
+	buffers      []*Buffer
+	activeBuffer *Buffer
+	mouseMode    MouseMode
+	mouseExtMode MouseExtMode
+	logFile      *os.File
+	theme        *Theme
 }
 
 // NewTerminal creates a new terminal instance
@@ -44,9 +41,9 @@ func New(options ...Option) *Terminal {
 	fg := term.theme.DefaultForeground()
 	bg := term.theme.DefaultBackground()
 	term.buffers = []*Buffer{
-		NewBuffer(1, 1, 0xffff, fg, bg),
-		NewBuffer(1, 1, 0xffff, fg, bg),
-		NewBuffer(1, 1, 0xffff, fg, bg),
+		NewBuffer(4096, 80, 0xffff, fg, bg),
+		NewBuffer(4096, 80, 0xffff, fg, bg),
+		NewBuffer(4096, 80, 0xffff, fg, bg),
 	}
 	term.activeBuffer = term.buffers[0]
 
@@ -88,18 +85,16 @@ func (t *Terminal) Write(data []byte) (n int, err error) {
 	return len(data), nil
 }
 
-func (t *Terminal) IsRunning() bool {
-	return t.running
-}
-
 func (t *Terminal) requestRender() {
+	t.log(t.GetActiveBuffer().getCurrentLine().String())
 }
 
-func (t *Terminal) processSequence(mr MeasuredRune) (render bool) {
+func (t *Terminal) processSequence(mr MeasuredRune) {
 	if mr.Rune == 0x1b {
-		return t.handleANSI(t.processChan)
+		t.handleANSI(t.processChan)
+	} else {
+		t.processRunes(mr)
 	}
-	return t.processRunes(mr)
 }
 
 func (t *Terminal) process() {
@@ -108,42 +103,32 @@ func (t *Terminal) process() {
 		case <-t.closeChan:
 			return
 		case mr := <-t.processChan:
-			if t.processSequence(mr) {
-				t.requestRender()
-			}
+			t.processSequence(mr)
 		}
 	}
 }
 
-func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
+func (t *Terminal) processRunes(runes ...MeasuredRune) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	for _, r := range runes {
-
-		t.log("%c 0x%X", r.Rune, r.Rune)
-
 		switch r.Rune {
 		case 0x05: //enq
 			continue
 		case 0x07: //bell
-			//DING DING DING
 			continue
 		case 0x8: //backspace
 			t.activeBuffer.backspace()
-			renderRequired = true
 		case 0x9: //tab
 			t.activeBuffer.tab()
-			renderRequired = true
 		case 0xa, 0xc: //newLine/form feed
 			t.activeBuffer.newLine()
-			renderRequired = true
 		case 0xb: //vertical tab
 			t.activeBuffer.verticalTab()
-			renderRequired = true
 		case 0xd: //carriageReturn
 			t.activeBuffer.carriageReturn()
-			renderRequired = true
+			t.requestRender()
 		case 0xe: //shiftOut
 			t.activeBuffer.currentCharset = 1
 		case 0xf: //shiftIn
@@ -155,11 +140,10 @@ func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 			}
 
 			t.activeBuffer.write(t.translateRune(r))
-			renderRequired = true
 		}
 	}
 
-	return renderRequired
+	return false
 }
 
 func (t *Terminal) translateRune(b MeasuredRune) MeasuredRune {
