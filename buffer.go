@@ -8,23 +8,10 @@ import (
 
 const TabSize = 8
 
-type CursorShape uint8
-
-const (
-	CursorShapeBlinkingBlock CursorShape = iota
-	CursorShapeDefault
-	CursorShapeSteadyBlock
-	CursorShapeBlinkingUnderline
-	CursorShapeSteadyUnderline
-	CursorShapeBlinkingBar
-	CursorShapeSteadyBar
-)
-
 type Buffer struct {
 	lines                 []Line
 	savedCursorPos        Position
 	savedCursorAttr       *CellAttributes
-	cursorShape           CursorShape
 	savedCharsets         []*map[rune]rune
 	savedCurrentCharset   int
 	topMargin             uint // see DECSTBM docs - this is for scrollable regions
@@ -85,17 +72,8 @@ func NewBuffer(width, height uint16, maxLines uint64, fg color.Color, bg color.C
 			ShowCursor:     true,
 			SixelScrolling: true,
 		},
-		cursorShape: CursorShapeDefault,
 	}
 	return b
-}
-
-func (buffer *Buffer) SetCursorShape(shape CursorShape) {
-	buffer.cursorShape = shape
-}
-
-func (buffer *Buffer) GetCursorShape() CursorShape {
-	return buffer.cursorShape
 }
 
 func (buffer *Buffer) IsCursorVisible() bool {

@@ -985,13 +985,5 @@ func (t *Terminal) csiSoftResetHandler(params []string) bool {
 }
 
 func (t *Terminal) csiCursorSelection(params []string) (renderRequired bool) {
-	if len(params) == 0 {
-		return false
-	}
-	i, err := strconv.Atoi(params[0])
-	if err != nil {
-		return false
-	}
-	t.GetActiveBuffer().SetCursorShape(CursorShape(i))
-	return true
+	return false
 }
