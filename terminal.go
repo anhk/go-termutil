@@ -18,7 +18,6 @@ const (
 // Terminal communicates with the underlying terminal
 type Terminal struct {
 	mu             sync.Mutex
-	updateChan     chan struct{}
 	processChan    chan MeasuredRune
 	closeChan      chan struct{}
 	buffers        []*Buffer
@@ -94,10 +93,6 @@ func (t *Terminal) IsRunning() bool {
 }
 
 func (t *Terminal) requestRender() {
-	select {
-	case t.updateChan <- struct{}{}:
-	default:
-	}
 }
 
 func (t *Terminal) processSequence(mr MeasuredRune) (render bool) {
