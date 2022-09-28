@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"sync"
 
 	"github.com/creack/pty"
-	"golang.org/x/term"
 )
 
 const (
@@ -21,21 +19,20 @@ const (
 
 // Terminal communicates with the underlying terminal
 type Terminal struct {
-	mu                sync.Mutex
-	windowManipulator WindowManipulator
-	pty               *os.File
-	updateChan        chan struct{}
-	processChan       chan MeasuredRune
-	closeChan         chan struct{}
-	buffers           []*Buffer
-	activeBuffer      *Buffer
-	mouseMode         MouseMode
-	mouseExtMode      MouseExtMode
-	logFile           *os.File
-	theme             *Theme
-	running           bool
-	shell             string
-	initialCommand    string
+	mu             sync.Mutex
+	pty            *os.File
+	updateChan     chan struct{}
+	processChan    chan MeasuredRune
+	closeChan      chan struct{}
+	buffers        []*Buffer
+	activeBuffer   *Buffer
+	mouseMode      MouseMode
+	mouseExtMode   MouseExtMode
+	logFile        *os.File
+	theme          *Theme
+	running        bool
+	shell          string
+	initialCommand string
 }
 
 // NewTerminal creates a new terminal instance
@@ -59,10 +56,6 @@ func New(options ...Option) *Terminal {
 
 	go term.process()
 	return term
-}
-
-func (t *Terminal) SetWindowManipulator(m WindowManipulator) {
-	t.windowManipulator = m
 }
 
 func (t *Terminal) log(line string, params ...interface{}) {
@@ -90,10 +83,6 @@ func (t *Terminal) Pty() *os.File {
 func (t *Terminal) WriteToPty(data []byte) error {
 	_, err := t.pty.Write(data)
 	return err
-}
-
-func (t *Terminal) GetTitle() string {
-	return t.windowManipulator.GetTitle()
 }
 
 func (t *Terminal) Theme() *Theme {
@@ -129,63 +118,6 @@ func (t *Terminal) SetSize(rows, cols uint16) error {
 		return err
 	}
 
-	return nil
-}
-
-// Run starts the terminal/shell proxying process
-func (t *Terminal) Run(updateChan chan struct{}, rows uint16, cols uint16) error {
-
-	os.Setenv("TERM", "xterm-256color")
-
-	t.updateChan = updateChan
-
-	if t.shell == "" {
-		t.shell = os.Getenv("SHELL")
-		if t.shell == "" {
-			t.shell = "/bin/sh"
-		}
-	}
-
-	// Create arbitrary command.
-	c := exec.Command(t.shell)
-
-	// Start the command with a pty.
-	var err error
-	t.pty, err = pty.Start(c)
-	if err != nil {
-		return err
-	}
-	// Make sure to close the pty at the end.
-	defer func() { _ = t.pty.Close() }() // Best effort.
-
-	if err := t.SetSize(rows, cols); err != nil {
-		return err
-	}
-
-	// Set stdin in raw mode.
-
-	if fd := int(os.Stdin.Fd()); term.IsTerminal(fd) {
-		oldState, err := term.MakeRaw(fd)
-		if err != nil {
-			t.windowManipulator.ReportError(err)
-		}
-		defer func() { _ = term.Restore(fd, oldState) }() // Best effort.
-	}
-
-	go t.process()
-
-	t.running = true
-
-	t.windowManipulator.SetTitle("darktile")
-
-	if t.initialCommand != "" {
-		if err := t.WriteToPty([]byte(t.initialCommand)); err != nil {
-			return err
-		}
-	}
-
-	_, _ = io.Copy(t, t.pty)
-	close(t.closeChan)
 	return nil
 }
 
@@ -277,10 +209,6 @@ func (t *Terminal) translateRune(b MeasuredRune) MeasuredRune {
 		return MeasuredRune{Rune: chr, Width: 1}
 	}
 	return b
-}
-
-func (t *Terminal) setTitle(title string) {
-	t.windowManipulator.SetTitle(title)
 }
 
 func (t *Terminal) switchBuffer(index uint8) {

@@ -33,9 +33,3 @@ func WithInitialCommand(cmd string) Option {
 		t.initialCommand = cmd + "\n"
 	}
 }
-
-func WithWindowManipulator(m WindowManipulator) Option {
-	return func(t *Terminal) {
-		t.windowManipulator = m
-	}
-}
