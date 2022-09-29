@@ -1,18 +1,16 @@
 package termutil
 
-func (t *Terminal) handleOSC(readChan chan MeasuredRune) (renderRequired bool) {
+func (t *Terminal) handleOSC(reader *Reader) (renderRequired bool) {
 
 READ:
 	for {
-		select {
-		case b := <-readChan:
-			if t.isOSCTerminator(b.Rune) {
-				break READ
-			}
-			if b.Rune == ';' {
-				continue
-			}
-		default:
+		b := reader.ReadRune()
+		if t.isOSCTerminator(b.Rune) {
+			break READ
+		}
+		if b.Rune == ';' {
+			continue
+		} else {
 			return false
 		}
 	}

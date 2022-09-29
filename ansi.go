@@ -1,8 +1,8 @@
 package termutil
 
-func (t *Terminal) handleANSI(readChan chan MeasuredRune) bool {
+func (t *Terminal) handleANSI(reader *Reader) bool {
 	// if the byte is an escape character, read the next byte to determine which one
-	r := <-readChan
+	r := reader.ReadRune()
 
 	t.log("ANSI SEQ %c 0x%X", r.Rune, r.Rune)
 
@@ -11,21 +11,21 @@ func (t *Terminal) handleANSI(readChan chan MeasuredRune) bool {
 
 	switch r.Rune {
 	case '[':
-		return t.handleCSI(readChan)
+		return t.handleCSI(reader)
 	case ']':
-		return t.handleOSC(readChan)
+		return t.handleOSC(reader)
 	case '(':
-		return t.handleSCS0(readChan) // select character set into G0
+		return t.handleSCS0(reader) // select character set into G0
 	case ')':
-		return t.handleSCS1(readChan) // select character set into G1
+		return t.handleSCS1(reader) // select character set into G1
 	case '*':
-		return swallowHandler(1)(readChan) // character set bullshit
+		return swallowHandler(1)(reader) // character set bullshit
 	case '+':
-		return swallowHandler(1)(readChan) // character set bullshit
+		return swallowHandler(1)(reader) // character set bullshit
 	case '>':
-		return swallowHandler(0)(readChan) // numeric char selection
+		return swallowHandler(0)(reader) // numeric char selection
 	case '=':
-		return swallowHandler(0)(readChan) // alt char selection
+		return swallowHandler(0)(reader) // alt char selection
 	case '7':
 		t.GetActiveBuffer().saveCursor()
 	case '8':
@@ -39,13 +39,13 @@ func (t *Terminal) handleANSI(readChan chan MeasuredRune) bool {
 	case 'M':
 		t.GetActiveBuffer().reverseIndex()
 	case 'P': // sixel
-		t.handleSixel(readChan)
+		t.handleSixel(reader)
 	case 'c':
 		t.GetActiveBuffer().clear()
 	case '#':
-		return t.handleScreenState(readChan)
+		return t.handleScreenState(reader)
 	case '^':
-		return t.handlePrivacyMessage(readChan)
+		return t.handlePrivacyMessage(reader)
 	default:
 		t.log("UNKNOWN ESCAPE SEQUENCE: 0x%X", r.Rune)
 		return false
@@ -54,17 +54,17 @@ func (t *Terminal) handleANSI(readChan chan MeasuredRune) bool {
 	return false
 }
 
-func swallowHandler(size int) func(pty chan MeasuredRune) bool {
-	return func(pty chan MeasuredRune) bool {
+func swallowHandler(size int) func(reader *Reader) bool {
+	return func(reader *Reader) bool {
 		for i := 0; i < size; i++ {
-			<-pty
+			reader.ReadRune()
 		}
 		return false
 	}
 }
 
-func (t *Terminal) handleScreenState(readChan chan MeasuredRune) bool {
-	b := <-readChan
+func (t *Terminal) handleScreenState(reader *Reader) bool {
+	b := reader.ReadRune()
 	switch b.Rune {
 	case '8': // DECALN -- Screen Alignment Pattern
 
@@ -91,10 +91,13 @@ func (t *Terminal) handleScreenState(readChan chan MeasuredRune) bool {
 	return true
 }
 
-func (t *Terminal) handlePrivacyMessage(readChan chan MeasuredRune) bool {
+func (t *Terminal) handlePrivacyMessage(reader *Reader) bool {
 	isEscaped := false
 	for {
-		b := <-readChan
+		b := reader.ReadRune()
+		if b.Empty() {
+			break
+		}
 		if b.Rune == 0x18 /*CAN*/ || b.Rune == 0x1a /*SUB*/ || (b.Rune == 0x5c /*backslash*/ && isEscaped) {
 			break
 		}

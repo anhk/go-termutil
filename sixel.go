@@ -55,12 +55,15 @@ func (b *Buffer) GetVisibleSixels() []VisibleSixel {
 	return visible
 }
 
-func (t *Terminal) handleSixel(readChan chan MeasuredRune) (renderRequired bool) {
+func (t *Terminal) handleSixel(reader *Reader) (renderRequired bool) {
 
 	var inEscape bool
 
 	for {
-		r := <-readChan
+		r := reader.ReadRune()
+		if r.Empty() {
+			return false
+		}
 
 		switch r.Rune {
 		case 0x1b:

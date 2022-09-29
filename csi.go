@@ -5,14 +5,17 @@ import (
 	"strings"
 )
 
-func parseCSI(readChan chan MeasuredRune) (final rune, params []string, intermediate []rune, raw []rune) {
+func parseCSI(reader *Reader) (final rune, params []string, intermediate []rune, raw []rune) {
 	var b MeasuredRune
 
 	param := ""
 	intermediate = []rune{}
 CSI:
 	for {
-		b = <-readChan
+		b = reader.ReadRune()
+		if b.Empty() {
+			break CSI
+		}
 		raw = append(raw, b.Rune)
 		switch true {
 		case b.Rune >= 0x30 && b.Rune <= 0x3F:
@@ -39,8 +42,8 @@ CSI:
 	return final, params, intermediate, raw
 }
 
-func (t *Terminal) handleCSI(readChan chan MeasuredRune) (renderRequired bool) {
-	final, params, intermediate, raw := parseCSI(readChan)
+func (t *Terminal) handleCSI(reader *Reader) (renderRequired bool) {
+	final, params, intermediate, raw := parseCSI(reader)
 
 	t.log("CSI P(%q) I(%q) %c", strings.Join(params, ";"), string(intermediate), final)
 

@@ -41,17 +41,16 @@ var decSpecGraphics = map[rune]rune{
 	0x7e: 0x00B7, // MIDDLE DOT
 }
 
-func (t *Terminal) handleSCS0(pty chan MeasuredRune) bool {
-	return t.scsHandler(pty, 0)
+func (t *Terminal) handleSCS0(reader *Reader) bool {
+	return t.scsHandler(reader, 0)
 }
 
-func (t *Terminal) handleSCS1(pty chan MeasuredRune) bool {
-	return t.scsHandler(pty, 1)
+func (t *Terminal) handleSCS1(reader *Reader) bool {
+	return t.scsHandler(reader, 1)
 }
 
-func (t *Terminal) scsHandler(pty chan MeasuredRune, which int) bool {
-	b := <-pty
-
+func (t *Terminal) scsHandler(reader *Reader, which int) bool {
+	b := reader.ReadRune()
 	cs, ok := charSets[b.Rune]
 	if ok {
 		//terminal.logger.Debugf("Selected charset %v into G%v", string(b), which)

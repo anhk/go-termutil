@@ -63,7 +63,8 @@ func main() {
 			// fmt.Printf("=== %+v\n", string(b))
 
 		case "output":
-			terminal.Write(b)
+			// terminal.Write(b)
+			terminal.Process(b)
 		}
 	}
 

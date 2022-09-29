@@ -1,10 +1,7 @@
 package termutil
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"sync"
 )
@@ -18,7 +15,6 @@ const (
 // Terminal communicates with the underlying terminal
 type Terminal struct {
 	mu           sync.Mutex
-	processChan  chan MeasuredRune
 	buffers      []*Buffer
 	activeBuffer *Buffer
 	mouseMode    MouseMode
@@ -32,8 +28,7 @@ type Terminal struct {
 // NewTerminal creates a new terminal instance
 func New(options ...Option) *Terminal {
 	term := &Terminal{
-		processChan: make(chan MeasuredRune, 0xffff),
-		theme:       &Theme{},
+		theme: &Theme{},
 	}
 	for _, opt := range options {
 		opt(term)
@@ -47,7 +42,6 @@ func New(options ...Option) *Terminal {
 	}
 	term.activeBuffer = term.buffers[0]
 
-	go term.process()
 	return term
 }
 
@@ -72,22 +66,18 @@ func (t *Terminal) Theme() *Theme {
 	return t.theme
 }
 
-func (t *Terminal) Close() {
-	close(t.processChan)
-}
-
-// write takes data from StdOut of the child shell and processes it
-func (t *Terminal) Write(data []byte) (n int, err error) {
-	reader := bufio.NewReader(bytes.NewBuffer(data))
-	for {
-		r, size, err := reader.ReadRune()
-		if err == io.EOF {
-			break
-		}
-		t.processChan <- MeasuredRune{Rune: r, Width: size}
-	}
-	return len(data), nil
-}
+// // write takes data from StdOut of the child shell and processes it
+// func (t *Terminal) Write(data []byte) (n int, err error) {
+// 	reader := bufio.NewReader(bytes.NewBuffer(data))
+// 	for {
+// 		r, size, err := reader.ReadRune()
+// 		if err == io.EOF {
+// 			break
+// 		}
+// 		t.processChan <- MeasuredRune{Rune: r, Width: size}
+// 	}
+// 	return len(data), nil
+// }
 
 func (t *Terminal) requestRender() {
 	if t.RequestRender != nil {
@@ -95,20 +85,21 @@ func (t *Terminal) requestRender() {
 	}
 }
 
-func (t *Terminal) processSequence(mr MeasuredRune) {
+func (t *Terminal) processSequence(mr MeasuredRune, reader *Reader) {
 	if mr.Rune == 0x1b {
-		t.handleANSI(t.processChan)
+		t.handleANSI(reader)
 	} else {
 		t.processRunes(mr)
 	}
 }
 
-func (t *Terminal) process() {
+func (t *Terminal) Process(data []byte) {
+	reader := NewReader(data)
 	for {
-		if mr, ok := <-t.processChan; ok {
-			t.processSequence(mr)
-		} else {
+		if mr := reader.ReadRune(); mr.Empty() {
 			return
+		} else {
+			t.processSequence(mr, reader)
 		}
 	}
 }
