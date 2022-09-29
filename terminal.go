@@ -72,6 +72,10 @@ func (t *Terminal) Theme() *Theme {
 	return t.theme
 }
 
+func (t *Terminal) Close() {
+	close(t.processChan)
+}
+
 // write takes data from StdOut of the child shell and processes it
 func (t *Terminal) Write(data []byte) (n int, err error) {
 	reader := bufio.NewReader(bytes.NewBuffer(data))
