@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/anhk/go-termutil"
@@ -23,19 +25,56 @@ type Line struct {
 }
 
 var (
-	terminal = termutil.New()
-	// terminal2  = termutil.New()
-	lineResult Line
-	// outputAsInput bool
+	regexs = []*regexp.Regexp{
+		// regexp.MustCompile("\x1b\\[[^@-~]*[@-~#]"),
+		// regexp.MustCompile("\x1b[!-~#]*\x1b\\\\"),
+		regexp.MustCompile(`\[[ -~]*][$#]*`),
+		regexp.MustCompile(`\[[0-9#]*P`),
+		regexp.MustCompile(`[ -~]*:[ -~]*#\s?`),
+	}
 )
 
-func saveLog() {
-	// if outputAsInput {
-	// 	lineResult.Type = "input"
-	// 	outputAsInput = false
-	// }
-	fmt.Println(terminal.GetActiveBuffer().GetCurrentLine().String())
-	// fmt.Println(terminal2.GetActiveBuffer().GetCurrentLine().String())
+type Processor struct {
+	outTerm *termutil.Terminal
+	inTerm  *termutil.Terminal
+
+	output        []string
+	outputAsInput bool
+}
+
+func (p *Processor) saveOutputLog() {
+	fmt.Println("[OUTPUT]", strings.Join(p.output, "\n"))
+	p.output = nil
+}
+
+func (p *Processor) processInputLog() {
+	// fmt.Println("[INPUT]", p.inTerm.GetActiveBuffer().GetCurrentLine().String())
+
+	if len(p.output) > 0 { // 如果output有暂存数据，则输出
+		p.saveOutputLog()
+	}
+	p.outputAsInput = true
+}
+
+func (p *Processor) processOutputLog() {
+	if p.outputAsInput {
+		p.outputAsInput = false
+		inputStr := p.outTerm.GetActiveBuffer().GetCurrentLine().String()
+		for _, r := range regexs {
+			inputStr = r.ReplaceAllString(inputStr, "")
+		}
+		if inputStr == "\n" || inputStr == "\r\n" {
+			return
+		}
+		fmt.Println("[INPUT]", p.outTerm.GetActiveBuffer().GetCurrentLine().String())
+		fmt.Println("[INPUT]", inputStr)
+		// fmt.Printf("[INPUT]: %x", inputStr)
+	} else {
+		p.output = append(p.output, p.outTerm.GetActiveBuffer().GetCurrentLine().String())
+		if len(p.output) > 1024 {
+			p.saveOutputLog()
+		}
+	}
 }
 
 func main() {
@@ -44,8 +83,11 @@ func main() {
 		panic(err)
 	}
 
+	p := &Processor{}
+	p.inTerm = termutil.New(termutil.WithRequestRender(p.processInputLog))
+	p.outTerm = termutil.New(termutil.WithRequestRender(p.processOutputLog))
+
 	r := bufio.NewReader(file)
-	terminal.RequestRender = saveLog
 	// terminal2.RequestRender = saveLog
 
 	for {
@@ -53,18 +95,20 @@ func main() {
 		if err != nil {
 			break
 		}
+		var lineResult Line
 		json.Unmarshal([]byte(message), &lineResult)
 		lineResult.TimeUnixNano = time.Now().UnixNano()
 		b, _ := base64.StdEncoding.DecodeString(lineResult.Content)
 		// fmt.Printf("=== %+v\n", lineResult)
+
 		switch lineResult.Type {
 		case "input":
 			// terminal2.Write(b)
 			// fmt.Printf("=== %+v\n", string(b))
-
+			p.inTerm.Process(b)
 		case "output":
 			// terminal.Write(b)
-			terminal.Process(b)
+			p.outTerm.Process(b)
 		}
 	}
 

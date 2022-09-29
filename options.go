@@ -15,3 +15,9 @@ func WithLogFile(path string) Option {
 		t.logFile, _ = os.Create(path)
 	}
 }
+
+func WithRequestRender(f func()) Option {
+	return func(t *Terminal) {
+		t.RequestRender = f
+	}
+}

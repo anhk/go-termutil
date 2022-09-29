@@ -62,23 +62,6 @@ func (t *Terminal) reset() {
 	t.useMainBuffer()
 }
 
-func (t *Terminal) Theme() *Theme {
-	return t.theme
-}
-
-// // write takes data from StdOut of the child shell and processes it
-// func (t *Terminal) Write(data []byte) (n int, err error) {
-// 	reader := bufio.NewReader(bytes.NewBuffer(data))
-// 	for {
-// 		r, size, err := reader.ReadRune()
-// 		if err == io.EOF {
-// 			break
-// 		}
-// 		t.processChan <- MeasuredRune{Rune: r, Width: size}
-// 	}
-// 	return len(data), nil
-// }
-
 func (t *Terminal) requestRender() {
 	if t.RequestRender != nil {
 		t.RequestRender()
