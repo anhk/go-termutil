@@ -386,7 +386,7 @@ func (buffer *Buffer) write(runes ...MeasuredRune) {
 
 	for _, r := range runes {
 
-		line := buffer.getCurrentLine()
+		line := buffer.GetCurrentLine()
 
 		if buffer.modes.ReplaceMode {
 
@@ -394,7 +394,7 @@ func (buffer *Buffer) write(runes ...MeasuredRune) {
 				if buffer.modes.AutoWrap {
 					buffer.cursorPosition.Line++
 					buffer.cursorPosition.Col = 0
-					line = buffer.getCurrentLine()
+					line = buffer.GetCurrentLine()
 
 				} else {
 					// no more room on line and wrapping is disabled
@@ -417,7 +417,7 @@ func (buffer *Buffer) write(runes ...MeasuredRune) {
 
 				buffer.newLineEx(true)
 
-				newLine := buffer.getCurrentLine()
+				newLine := buffer.GetCurrentLine()
 				if len(newLine.cells) == 0 {
 					newLine.append(buffer.defaultCell(true))
 				}
@@ -463,7 +463,7 @@ func (buffer *Buffer) inDoWrap() bool {
 func (buffer *Buffer) backspace() {
 
 	if buffer.cursorPosition.Col == 0 {
-		line := buffer.getCurrentLine()
+		line := buffer.GetCurrentLine()
 		if line.wrapped {
 			buffer.movePosition(int16(buffer.Width()-1), -1)
 		}
@@ -480,7 +480,7 @@ func (buffer *Buffer) carriageReturn() {
 	cursorVY := buffer.convertRawLineToViewLine(buffer.cursorPosition.Line)
 
 	for {
-		line := buffer.getCurrentLine()
+		line := buffer.GetCurrentLine()
 		if line == nil {
 			break
 		}
@@ -534,7 +534,7 @@ func (buffer *Buffer) verticalTab() {
 	buffer.index()
 
 	for {
-		line := buffer.getCurrentLine()
+		line := buffer.GetCurrentLine()
 		if !line.wrapped {
 			break
 		}
@@ -550,7 +550,7 @@ func (buffer *Buffer) newLineEx(forceCursorToMargin bool) {
 	buffer.index()
 
 	for {
-		line := buffer.getCurrentLine()
+		line := buffer.GetCurrentLine()
 		if !line.wrapped {
 			break
 		}
@@ -624,7 +624,7 @@ func (buffer *Buffer) clear() {
 }
 
 // creates if necessary
-func (buffer *Buffer) getCurrentLine() *Line {
+func (buffer *Buffer) GetCurrentLine() *Line {
 	cursorVY := buffer.convertRawLineToViewLine(buffer.cursorPosition.Line)
 	return buffer.getViewLine(cursorVY)
 }
@@ -653,7 +653,7 @@ func (buffer *Buffer) eraseLine() {
 
 	buffer.clearSixelsAtRawLine(buffer.cursorPosition.Line)
 
-	line := buffer.getCurrentLine()
+	line := buffer.GetCurrentLine()
 
 	for i := 0; i < int(buffer.viewWidth); i++ {
 		if i >= len(line.cells) {
@@ -666,7 +666,7 @@ func (buffer *Buffer) eraseLine() {
 
 func (buffer *Buffer) eraseLineToCursor() {
 	buffer.clearSixelsAtRawLine(buffer.cursorPosition.Line)
-	line := buffer.getCurrentLine()
+	line := buffer.GetCurrentLine()
 	for i := 0; i <= int(buffer.cursorPosition.Col); i++ {
 		if i < len(line.cells) {
 			line.cells[i].erase(buffer.cursorAttr.bgColour)
@@ -676,7 +676,7 @@ func (buffer *Buffer) eraseLineToCursor() {
 
 func (buffer *Buffer) eraseLineFromCursor() {
 	buffer.clearSixelsAtRawLine(buffer.cursorPosition.Line)
-	line := buffer.getCurrentLine()
+	line := buffer.GetCurrentLine()
 
 	for i := buffer.cursorPosition.Col; i < buffer.viewWidth; i++ {
 		if int(i) >= len(line.cells) {
@@ -699,7 +699,7 @@ func (buffer *Buffer) eraseDisplay() {
 
 func (buffer *Buffer) deleteChars(n int) {
 
-	line := buffer.getCurrentLine()
+	line := buffer.GetCurrentLine()
 	if int(buffer.cursorPosition.Col) >= len(line.cells) {
 		return
 	}
@@ -713,7 +713,7 @@ func (buffer *Buffer) deleteChars(n int) {
 
 func (buffer *Buffer) eraseCharacters(n int) {
 
-	line := buffer.getCurrentLine()
+	line := buffer.GetCurrentLine()
 
 	max := int(buffer.cursorPosition.Col) + n
 	if max > len(line.cells) {
@@ -726,7 +726,7 @@ func (buffer *Buffer) eraseCharacters(n int) {
 }
 
 func (buffer *Buffer) eraseDisplayFromCursor() {
-	line := buffer.getCurrentLine()
+	line := buffer.GetCurrentLine()
 
 	max := int(buffer.cursorPosition.Col)
 	if max > len(line.cells) {
@@ -742,7 +742,7 @@ func (buffer *Buffer) eraseDisplayFromCursor() {
 }
 
 func (buffer *Buffer) eraseDisplayToCursor() {
-	line := buffer.getCurrentLine()
+	line := buffer.GetCurrentLine()
 
 	for i := 0; i <= int(buffer.cursorPosition.Col); i++ {
 		if i >= len(line.cells) {

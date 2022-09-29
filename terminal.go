@@ -26,6 +26,8 @@ type Terminal struct {
 	mouseExtMode MouseExtMode
 	logFile      *os.File
 	theme        *Theme
+
+	RequestRender func()
 }
 
 // NewTerminal creates a new terminal instance
@@ -86,7 +88,9 @@ func (t *Terminal) Write(data []byte) (n int, err error) {
 }
 
 func (t *Terminal) requestRender() {
-	t.log(t.GetActiveBuffer().getCurrentLine().String())
+	if t.RequestRender != nil {
+		t.RequestRender()
+	}
 }
 
 func (t *Terminal) processSequence(mr MeasuredRune) {
