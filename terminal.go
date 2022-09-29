@@ -19,7 +19,6 @@ const (
 type Terminal struct {
 	mu           sync.Mutex
 	processChan  chan MeasuredRune
-	closeChan    chan struct{}
 	buffers      []*Buffer
 	activeBuffer *Buffer
 	mouseMode    MouseMode
@@ -34,7 +33,6 @@ type Terminal struct {
 func New(options ...Option) *Terminal {
 	term := &Terminal{
 		processChan: make(chan MeasuredRune, 0xffff),
-		closeChan:   make(chan struct{}),
 		theme:       &Theme{},
 	}
 	for _, opt := range options {
@@ -103,11 +101,10 @@ func (t *Terminal) processSequence(mr MeasuredRune) {
 
 func (t *Terminal) process() {
 	for {
-		select {
-		case <-t.closeChan:
-			return
-		case mr := <-t.processChan:
+		if mr, ok := <-t.processChan; ok {
 			t.processSequence(mr)
+		} else {
+			return
 		}
 	}
 }
